@@ -4,13 +4,21 @@ import { useCallback, useEffect, useRef, useState } from "react";
 /**
  * usePressAndHold hook
  */
-const usePressAndHold = (
-  key: string,
+
+type PressAndHoldParams = {
+  key: string;
+  holdDuration?: number;
+  onKeyDown?: () => void;
+  onKeyUp?: () => void;
+  onComplete?: () => void;
+};
+const usePressAndHold = ({
+  key,
   holdDuration = 1000,
-  onKeyDown?: () => void,
-  onKeyUp?: () => void,
-  onComplete?: () => void
-) => {
+  onKeyDown,
+  onKeyUp,
+  onComplete,
+}: PressAndHoldParams) => {
   const [status, setStatus] = useState<"pressed" | "completed" | "idle">(
     "idle"
   );
@@ -81,8 +89,9 @@ const usePressAndHold = (
 
 /////////////////////////////////////////////////////////////
 function App() {
-  const HOLD_DURATION = 1500;
   const containerRef = useRef<HTMLElement>(null);
+  const holdDuration = 1500;
+  const key = "w";
   const onHoldComplete = useCallback(() => {
     const color = [255, 255, 255]
       .map((val) => `${Math.floor(Math.random() * val)}`)
@@ -90,13 +99,13 @@ function App() {
     console.log(color);
     if (containerRef.current)
       containerRef.current.style.backgroundColor = `rgb(${color})`;
-  }, []);
+  }, [containerRef]);
 
-  const { status, progress } = usePressAndHold(
-    "w",
-    HOLD_DURATION,
-    onHoldComplete
-  );
+  const { status, progress } = usePressAndHold({
+    key,
+    holdDuration,
+    onComplete: onHoldComplete,
+  });
 
   useEffect(() => {
     console.log(status);
@@ -105,12 +114,12 @@ function App() {
   return (
     <main ref={containerRef} className="container mx-auto bg-slate-200">
       <div className="flex flex-col items-center justify-center h-screen ">
-        <h1 className="mx-4 font-bold mb-10 mt-2">Press and Hold "X" to Act</h1>
+        <h1 className="mx-4 font-bold mb-10 mt-2">Press and Hold "W"</h1>
         <div
           id="key-container"
           className="flex items-center justify-center relative w-16 h-16 border-2 border-white text-4xl rounded-lg"
         >
-          <span className="relative z-10">W</span>
+          <span className="relative z-10">{key}</span>
           <span
             id="progress-ui"
             style={{
