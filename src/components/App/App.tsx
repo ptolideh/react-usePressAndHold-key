@@ -1,31 +1,55 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-const TIME_OUT_DURATION = 2000;
-
-function App() {
-  const [status, setStatus] = useState<"keydown" | "completed" | "idle">(
+///////////////////////////////////////////////////////////////
+/**
+ * usePressAndHold hook
+ */
+const usePressAndHold = (
+  key: string,
+  holdDuration = 1000,
+  onKeyDown?: () => void,
+  onKeyUp?: () => void,
+  onComplete?: () => void
+) => {
+  const [status, setStatus] = useState<"pressed" | "completed" | "idle">(
     "idle"
   );
-  const [progressWidth, setProgressWidth] = useState(0);
+  const [progress, setProgress] = useState(0);
 
-  const containerRef = useRef<HTMLElement>(null);
-
-  // start listening to keydown if in idle state
+  // keydown -> start listening to keydown if in idle state
   useEffect(() => {
     if (status === "idle") {
       const handler = (e: KeyboardEvent) => {
-        if (e.key === "w") setStatus("keydown");
+        if (e.key === key) {
+          setStatus("pressed");
+          onKeyDown?.();
+        }
       };
       window.addEventListener("keydown", handler);
       return () => {
         window.removeEventListener("keydown", handler);
       };
     }
-  }, [status]);
+  }, [status, key, onKeyDown]);
+
+  // keyup -> reset status back to idle
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === key) {
+        onKeyUp?.();
+        setStatus("idle");
+      }
+    };
+
+    window.addEventListener("keyup", handler);
+    return () => {
+      window.removeEventListener("keyup", handler);
+    };
+  }, [key, onKeyUp]);
 
   // track how long the key been pressed
   // signal the end once completed
-  // update progress bar
+  // update progress
   useEffect(() => {
     let intervalToken: NodeJS.Timeout | null = null;
     let timeoutToken: NodeJS.Timeout | null = null;
@@ -33,47 +57,49 @@ function App() {
     const reset = () => {
       if (intervalToken) clearInterval(intervalToken);
       if (timeoutToken) clearTimeout(timeoutToken);
-      setProgressWidth(0);
+      setProgress(0);
     };
 
-    if (status === "keydown") {
+    if (status === "pressed") {
       intervalToken = setInterval(() => {
-        setProgressWidth((prevWidth) => prevWidth + 1);
-      }, Math.ceil(TIME_OUT_DURATION / 100));
+        setProgress((prevWidth) => prevWidth + 1);
+      }, Math.ceil(holdDuration / 100));
 
       timeoutToken = setTimeout(() => {
         setStatus("completed");
-      }, TIME_OUT_DURATION);
+        onComplete?.();
+      }, holdDuration);
     } else {
       reset();
     }
 
     return reset;
-  }, [status]);
+  }, [status, holdDuration, onComplete]);
 
-  // reset status back to idle
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "w") {
-        setStatus("idle");
-      }
-    };
-    window.addEventListener("keyup", handler);
-    return () => {
-      window.removeEventListener("keyup", handler);
-    };
+  return { status, progress };
+};
+
+/////////////////////////////////////////////////////////////
+function App() {
+  const HOLD_DURATION = 1500;
+  const containerRef = useRef<HTMLElement>(null);
+  const onHoldComplete = useCallback(() => {
+    const color = [255, 255, 255]
+      .map((val) => `${Math.floor(Math.random() * val)}`)
+      .join(",");
+    console.log(color);
+    if (containerRef.current)
+      containerRef.current.style.backgroundColor = `rgb(${color})`;
   }, []);
 
-  // change color when key's been pressed for full duration
+  const { status, progress } = usePressAndHold(
+    "w",
+    HOLD_DURATION,
+    onHoldComplete
+  );
+
   useEffect(() => {
-    if (status === "completed") {
-      const color = [255, 255, 255]
-        .map((val) => `${Math.floor(Math.random() * val)}`)
-        .join(",");
-      console.log(color);
-      if (containerRef.current)
-        containerRef.current.style.backgroundColor = `rgb(${color})`;
-    }
+    console.log(status);
   }, [status]);
 
   return (
@@ -88,7 +114,7 @@ function App() {
           <span
             id="progress-ui"
             style={{
-              width: `${progressWidth}%`,
+              width: `${progress}%`,
             }}
             className="absolute h-full bg-white z-0"
           ></span>
