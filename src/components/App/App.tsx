@@ -13,8 +13,8 @@ function App() {
   // start listening to keydown if in idle state
   useEffect(() => {
     if (status === "idle") {
-      const handler = () => {
-        setStatus("keydown");
+      const handler = (e: KeyboardEvent) => {
+        if (e.key === "w") setStatus("keydown");
       };
       window.addEventListener("keydown", handler);
       return () => {
@@ -53,8 +53,10 @@ function App() {
 
   // reset status back to idle
   useEffect(() => {
-    const handler = () => {
-      setStatus("idle");
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "w") {
+        setStatus("idle");
+      }
     };
     window.addEventListener("keyup", handler);
     return () => {
@@ -82,7 +84,7 @@ function App() {
           id="key-container"
           className="flex items-center justify-center relative w-16 h-16 border-2 border-white text-4xl rounded-lg"
         >
-          <span className="relative z-10">X</span>
+          <span className="relative z-10">W</span>
           <span
             id="progress-ui"
             style={{
